@@ -1,0 +1,97 @@
+﻿<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+
+@using DownNotifierEntities.Entities
+@model List<DownNotifierEntities.Entities.Parameter>
+
+<div class="container-fluid py-4">
+    <div class="row">
+
+        <div class="col-12" id="newParameterDiv" style="display:none">
+            <div class="card my-4">
+                <div class="card-body pb-2">
+                    <input type="text" hidden class="form-control" id="Id" name="Id">
+                    <div class="input-group input-group-static mb-3">
+                        <label>Parameter Value</label>
+                        <input type="text" class="form-control" id="ParValue" name="ParValue">
+                    </div>
+                    <div class="text-center">
+                        <button type="button" onclick="saveParameter()" class="btn bg-gradient-primary w-25 my-4 mb-2">Save</button>
+                        <button type="button" onclick="hideParameterField()" class="btn bg-gradient-primary w-25 my-4 mb-2">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+        <div class="col-12">
+            <div class="card my-4">
+                <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
+                    <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3">
+                        <h6 class="text-white text-capitalize ps-3">Parameters Table</h6>
+                    </div>
+                </div>
+                <div class="card-body px-0 pb-2">
+                    <div class="table-responsive p-0">
+                        <div id="partialParametersTable"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+<script>
+    function showParameterField() {
+        $("#newParameterDiv").show();
+    }
+    function hideParameterField() {
+        $("#newParameterDiv").hide();
+        $('#newParameterDiv').find('input').val('');
+    }
+
+    $(document).ready(function () {
+        getParameters(0);
+    });
+
+    function saveParameter() {
+        var model = {
+            Id: $("#Id").val(),
+            ParValue: $("#ParValue").val()
+        };
+        $.post('/Parameter/UpdateParameter', { model: model }, function (result) {
+            swal("Parameter has been updated!", { icon: "success" });
+            hideParameterField();
+            getParameters(0);
+        });
+    }
+
+    function getParameters(parameterId) {
+        $.get('/Parameter/GetParameters', { targetAppId: parameterId }, function (result) {
+            $("#partialParametersTable").empty().append(result);
+        });
+    }
+
+    function getParameterField(item) {
+        $.get('/Parameter/GetParameter', { parameterId: item }, function (result) {
+            if (result.success) {
+                $("#Id").val(result.data.id);
+                $("#ParValue").val(result.data.parValue);
+                showParameterField();
+            }
+            else {
+                swal("Parameter could not found.", { icon: "warning" });
+            }
+        });
+    }
+
+
+
+
+
+</script>

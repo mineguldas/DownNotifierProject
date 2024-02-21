@@ -1,0 +1,270 @@
+﻿<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+
+
+@using DownNotifierEntities.Entities
+@model List<DownNotifierEntities.Entities.Parameter>
+
+<style>
+    .table td .progress {
+        height: 10px;
+        width: 120px;
+        margin: 0;
+    }
+
+        .table td .progress .progress-bar {
+            height: 10px;
+        }
+
+    .zaman-input {
+        font-size: 30px;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        color: #EC407A;
+    }
+</style>
+
+
+<div class="container-fluid py-4">
+    <div class="row">
+
+        <div class="col-12">
+            <div class="card my-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="zaman-input" id="zaman"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-12" id="checkTargetAppHealth" style="display:none">
+            <div class="card my-4">
+                <div class="card-body pb-2">
+                    <div class="row">
+                        <div class="col-md-10">
+                            <div class="input-group input-group-static mb-3">
+                                <label>URL</label>
+                                <input type="text" class="form-control" id="checkTargetAppUrl" name="checkTargetAppUrl">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="text-center">
+                                <button type="button" onclick="checkTargetApp()" class="btn bg-gradient-primary w-100 my-4 mb-2">Check</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-12">
+            <div class="">
+                <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
+                    <div class="">
+                        <div class="text-center">
+                            <button type="button" class="btn bg-gradient-primary w-100 my-4 mb-2" onclick="showTargetAppField()">New Target App</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-12" id="newTargetAppDiv" style="display:none">
+            <div class="card my-4">
+                <div class="card-body pb-2">
+                    <form id="addTargetAppForm">
+                        <input type="text" hidden class="form-control" id="Id" name="Id">
+                        <div class="input-group input-group-static mb-3">
+                            <label>Name</label>
+                            <input type="text" class="form-control" required id="TargetAppName" name="TargetAppName">
+                        </div>
+                        <div class="input-group input-group-static mb-3">
+                            <label>URL</label>
+                            <input type="text" class="form-control" required id="TargetAppUrl" name="TargetAppUrl">
+                        </div>
+                        <div class="input-group input-group-static mb-3">
+                            <label>Up Interval (in seconds)</label>
+                            <input type="number" class="form-control" required id="MonitoringInterval" name="MonitoringInterval">
+                        </div>
+                        <div class="input-group input-group-static mb-3">
+                            <label>Down Interval (in seconds)</label>
+                            <input type="number" class="form-control" required id="CloseWaitingInterval" name="CloseWaitingInterval">
+                        </div>
+                        <div class="text-center">
+                            <button type="button" onclick="saveNewTargetApp()" class="btn bg-gradient-primary w-25 my-4 mb-2">Save</button>
+                            <button type="button" onclick="hideTargetAppField()" class="btn bg-gradient-primary w-25 my-4 mb-2">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card my-4">
+                <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
+                    <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3">
+                        <h6 class="text-white text-capitalize ps-3">Target Apps Table</h6>
+                    </div>
+                </div>
+                <div class="card-body px-0 pb-2">
+                    <div class="table-responsive p-0">
+                        <div id="partialTargetAppsTable"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+
+
+
+<script>
+    function showTargetAppField() {
+        $("#newTargetAppDiv").show();
+    }
+    function hideTargetAppField() {
+        $("#newTargetAppDiv").hide();
+        $('#newTargetAppDiv').find('input').val('');
+    }
+
+    function showCheckTargetAppField() {
+        $("#checkTargetAppHealth").show();
+    }
+    function hideCheckTargetAppField() {
+        $("#checkTargetAppHealth").hide();
+        $('#checkTargetAppHealth').find('input').val('');
+    }
+
+    $(document).ready(function () {
+        getTargetApps(0);
+        if ('@Model.FirstOrDefault(x=>x.ParEnum == DownNotifierEntities.Enums.Enums.ParameterType.SorgulamaOtomatikYapilsinMi)?.ParValue' === "False") {
+            showCheckTargetAppField();
+        }
+    });
+
+    function getList() {
+        if ('@Model.FirstOrDefault(x=>x.ParEnum == DownNotifierEntities.Enums.Enums.ParameterType.SorgulamaOtomatikYapilsinMi)?.ParValue' === "True") {
+            getTargetApps(0);
+        }
+        else {
+            showCheckTargetAppField();
+        }
+    }
+    setInterval(getList, (parseInt('@Model.FirstOrDefault(x=>x.ParEnum == DownNotifierEntities.Enums.Enums.ParameterType.SorgulamaKacSaniyedeBirYapilsin)?.ParValue') * 1000));
+
+    function saveNewTargetApp() {
+        if ($("#TargetAppName").val() != "" && $("#TargetAppUrl").val() != "" && $("#MonitoringInterval").val() != "" && $("#CloseWaitingInterval").val() != "")
+        {
+            var model = {
+                Id: $("#Id").val(),
+                TargetAppName: $("#TargetAppName").val(),
+                TargetAppUrl: $("#TargetAppUrl").val(),
+                MonitoringInterval: $("#MonitoringInterval").val(),
+                CloseWaitingInterval: $("#CloseWaitingInterval").val(),
+            };
+            $.post('/TargetApp/AddTargetApp', { model: model }, function (result) {
+                if (result.success) {
+                    swal("Target app has been added!", { icon: "success" });
+                    hideTargetAppField();
+                    getTargetApps(0);
+                }
+                else {
+                    hideTargetAppField();
+                    swal("Target app could not added!", { icon: "warning" });
+                }
+            });
+        }
+        else {
+            swal("Fill the all inputs!", { icon: "warning" });
+        }
+    }
+
+    function getTargetApps(targetAppId) {
+        $.get('/TargetApp/GetTargetApps', { targetAppId: targetAppId }, function (result) {
+            $("#partialTargetAppsTable").empty().append(result);
+            swal({
+                title: '',
+                text: 'Target apps table refreshed!',
+                timer: 2000,
+                showCancelButton: false,
+                showConfirmButton: false,
+                icon: "success"
+            })
+        });
+    }
+
+    function getTargetAppField(item) {
+        $.get('/TargetApp/GetTargetApp', { targetAppId: item }, function (result) {
+            if (result.success) {
+                $("#Id").val(result.data.id);
+                $("#TargetAppName").val(result.data.targetAppName);
+                $("#TargetAppUrl").val(result.data.targetAppUrl);
+                $("#MonitoringInterval").val(result.data.monitoringInterval);
+                $("#CloseWaitingInterval").val(result.data.closeWaitingInterval);
+                showTargetAppField();
+            }
+            else {
+                swal("Target app could not found.", { icon: "warning" });
+            }
+        });
+    }
+
+    function deleteTargetAppField(targetAppId) {
+        swal({
+            title: "Are you sure ??",
+            text: "You will not be able to recover this target app!",
+            icon: "warning",
+            buttons: true,
+            dangerMode: true,
+        })
+            .then((willDelete) => {
+                if (willDelete) {
+                    $.post('/TargetApp/DeleteTargetApp', { targetAppId: targetAppId }, function (result) {
+                        swal("Deleted!", "Your target app has been deleted.", "success");
+                        getTargetApps(0);
+                    });
+                    swal("Target app has been deleted!", { icon: "success" });
+                } else {
+                    getTargetApps(0);
+                }
+            });
+    }
+
+    function checkTargetApp() {
+        $.post('/TargetApp/CheckTargetApp', { TargetAppUrl: $("#checkTargetAppUrl").val() }, function (result) {
+            if (result.success) {
+                if (result.data.statu == '@Convert.ToInt32(DownNotifierEntities.Enums.Enums.TargetAppStatus.Open)') {
+                    swal("Target app has opened!").then((value) => { getTargetApps(0); });
+                }
+                else {
+                    if (result.mailSent) {
+                        swal("Target app has closed! Email has been sent.").then((value) => { getTargetApps(0); });
+                    }
+                    else {
+                        swal("Target app has closed! Email sending could not be done.").then((value) => { getTargetApps(0); });
+                    }
+                }
+            }
+            else {
+                swal("Target app could not found.").then((value) => { getTargetApps(0); });
+            }
+            $("#checkTargetAppUrl").val("");
+        });
+    }
+
+    function tarihSaat() {
+        var date = new Date().toLocaleString('tr-TR');
+        document.getElementById("zaman").innerHTML = date;
+    }
+    setInterval(tarihSaat, 1000);
+
+
+</script>
